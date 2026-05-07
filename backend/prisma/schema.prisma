@@ -1,0 +1,292 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Role {
+  EMPLOYEE
+  AGENT
+  TEAM_LEADER
+  ADMIN
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  PENDING
+  RESOLVED
+  CLOSED
+  REOPENED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ASSIGNED
+  MAINTENANCE
+  RETIRED
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  firstName    String
+  lastName     String
+  phone        String?
+  avatar       String?
+  role         Role     @default(EMPLOYEE)
+  departmentId String?
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  lastLoginIp  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  department        Department?     @relation(fields: [departmentId], references: [id])
+  createdTickets    Ticket[]        @relation("TicketCreator")
+  assignedTickets   Ticket[]        @relation("TicketAssignee")
+  comments          TicketComment[]
+  notifications     Notification[]
+  activityLogs      ActivityLog[]
+  knowledgeArticles KBArticle[]
+  assignedAssets    Asset[]
+
+  @@index([email])
+  @@index([role])
+  @@index([departmentId])
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users   User[]
+  tickets Ticket[]
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tickets  Ticket[]
+  slaRules SLARule[]
+}
+
+model Ticket {
+  id           String       @id @default(uuid())
+  ticketNumber String       @unique
+  title        String
+  description  String
+  status       TicketStatus @default(OPEN)
+  priority     Priority     @default(MEDIUM)
+  categoryId   String
+  departmentId String?
+  creatorId    String
+  assigneeId   String?
+  slaDeadline  DateTime?
+  slaBreached  Boolean      @default(false)
+  resolvedAt   DateTime?
+  closedAt     DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  category    Category        @relation(fields: [categoryId], references: [id])
+  department  Department?     @relation(fields: [departmentId], references: [id])
+  creator     User            @relation("TicketCreator", fields: [creatorId], references: [id])
+  assignee    User?           @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  comments    TicketComment[]
+  attachments Attachment[]
+  history     TicketHistory[]
+
+  @@index([ticketNumber])
+  @@index([status])
+  @@index([priority])
+  @@index([creatorId])
+  @@index([assigneeId])
+  @@index([categoryId])
+  @@index([createdAt])
+}
+
+model TicketComment {
+  id         String   @id @default(uuid())
+  content    String
+  isInternal Boolean  @default(false)
+  ticketId   String
+  authorId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id])
+
+  @@index([ticketId])
+}
+
+model Attachment {
+  id       String @id @default(uuid())
+  fileName String
+  filePath String
+  fileSize Int
+  mimeType String
+  ticketId String
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+model TicketHistory {
+  id        String   @id @default(uuid())
+  ticketId  String
+  field     String
+  oldValue  String?
+  newValue  String?
+  changedBy String
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+model SLARule {
+  id               String   @id @default(uuid())
+  name             String
+  priority         Priority
+  categoryId       String?
+  responseTimeMin  Int
+  resolveTimeMin   Int
+  escalateAfterMin Int?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  category Category? @relation(fields: [categoryId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model KBArticle {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  categoryTag String?
+  tags        String[]
+  authorId    String
+  isPublished Boolean  @default(false)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([isPublished])
+}
+
+model Asset {
+  id           String      @id @default(uuid())
+  assetTag     String      @unique
+  name         String
+  type         String
+  serialNumber String?
+  manufacturer String?
+  model        String?
+  status       AssetStatus @default(AVAILABLE)
+  assignedToId String?
+  purchaseDate DateTime?
+  warrantyEnd  DateTime?
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  assignedTo  User?            @relation(fields: [assignedToId], references: [id])
+  maintenance MaintenanceLog[]
+
+  @@index([assetTag])
+  @@index([status])
+}
+
+model MaintenanceLog {
+  id          String   @id @default(uuid())
+  assetId     String
+  description String
+  performedBy String
+  cost        Float?
+  performedAt DateTime @default(now())
+
+  // Relations
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+}
