@@ -64,7 +64,7 @@ const getMonthlyReport = async (req, res) => {
 
 const exportTickets = async (req, res) => {
   try {
-    const { dateFrom, dateTo, status, priority } = req.query;
+    const { dateFrom, dateTo, status, priority, search } = req.query;
     const where = {};
     if (dateFrom || dateTo) {
       where.createdAt = {};
@@ -73,6 +73,34 @@ const exportTickets = async (req, res) => {
     }
     if (status) where.status = status;
     if (priority) where.priority = priority;
+    if (search) {
+      const searchUpper = search.toUpperCase().replace(' ', '_');
+      const validStatuses = ['OPEN', 'IN_PROGRESS', 'PENDING', 'RESOLVED', 'CLOSED', 'REOPENED'];
+      const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+      
+      const orConditions = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { ticketNumber: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { category: { name: { contains: search, mode: 'insensitive' } } },
+        { creator: { firstName: { contains: search, mode: 'insensitive' } } },
+        { creator: { lastName: { contains: search, mode: 'insensitive' } } },
+        { assignee: { firstName: { contains: search, mode: 'insensitive' } } },
+        { assignee: { lastName: { contains: search, mode: 'insensitive' } } }
+      ];
+
+      const matchedStatuses = validStatuses.filter(s => s.includes(searchUpper));
+      if (matchedStatuses.length > 0) {
+        orConditions.push({ status: { in: matchedStatuses } });
+      }
+
+      const matchedPriorities = validPriorities.filter(p => p.includes(searchUpper));
+      if (matchedPriorities.length > 0) {
+        orConditions.push({ priority: { in: matchedPriorities } });
+      }
+
+      where.OR = orConditions;
+    }
 
     const tickets = await prisma.ticket.findMany({
       where,

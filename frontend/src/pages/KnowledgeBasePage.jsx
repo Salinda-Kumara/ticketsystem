@@ -15,7 +15,12 @@ export default function KnowledgeBasePage() {
   const { isStaff } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => { fetchArticles(); }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchArticles();
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const fetchArticles = async () => {
     setLoading(true);
@@ -55,7 +60,7 @@ export default function KnowledgeBasePage() {
       </div>
 
       <div className="glass-card" style={{ padding: 16, marginBottom: 16 }}>
-        <form onSubmit={(e) => { e.preventDefault(); fetchArticles(); }} style={{ display: 'flex', gap: 12 }}>
+        <form onSubmit={(e) => { e.preventDefault(); }} style={{ display: 'flex', gap: 12 }}>
           <div className="search-input-wrapper" style={{ flex: 1 }}>
             <HiOutlineSearch className="search-icon" />
             <input className="form-input" placeholder="Search articles..." value={search} onChange={e => setSearch(e.target.value)} />

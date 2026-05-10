@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ticketsAPI } from '../services/api';
+import { ticketsAPI, reportsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { HiOutlinePlus, HiOutlineSearch, HiOutlineFilter, HiOutlineRefresh } from 'react-icons/hi';
+import { HiOutlinePlus, HiOutlineSearch, HiOutlineFilter, HiOutlineRefresh, HiOutlineDownload } from 'react-icons/hi';
 import { format } from 'date-fns';
 
 export default function TicketListPage() {
@@ -17,8 +17,11 @@ export default function TicketListPage() {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    fetchTickets();
-  }, [filters.status, filters.priority, filters.page]);
+    const timer = setTimeout(() => {
+      fetchTickets();
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [filters.search, filters.status, filters.priority, filters.page]);
 
   useEffect(() => {
     fetchStats();
@@ -46,10 +49,29 @@ export default function TicketListPage() {
     setLoading(false);
   };
 
+  const handleDownloadReport = async () => {
+    try {
+      const params = {};
+      if (filters.search) params.search = filters.search;
+      if (filters.status) params.status = filters.status;
+      if (filters.priority) params.priority = filters.priority;
+      
+      const res = await reportsAPI.exportTickets(params);
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `tickets_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Download failed', error);
+      alert('Failed to download report');
+    }
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
-    setFilters(f => ({ ...f, page: 1 }));
-    fetchTickets();
   };
 
   const statusOptions = ['', 'OPEN', 'IN_PROGRESS', 'PENDING', 'RESOLVED', 'CLOSED', 'REOPENED'];
@@ -72,6 +94,11 @@ export default function TicketListPage() {
           <p className="page-subtitle">{pagination.total} total tickets</p>
         </div>
         <div className="page-actions">
+          {isStaff && (
+            <button className="btn btn-secondary" onClick={handleDownloadReport}>
+              <HiOutlineDownload size={16} /> Download Report
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={() => setShowFilters(!showFilters)}>
             <HiOutlineFilter size={16} /> Filters
           </button>
@@ -152,7 +179,7 @@ export default function TicketListPage() {
               className="form-input"
               placeholder="Search tickets..."
               value={filters.search}
-              onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
+              onChange={e => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
             />
           </div>
           {showFilters && (
@@ -168,7 +195,7 @@ export default function TicketListPage() {
             </>
           )}
           <button type="submit" className="btn btn-secondary"><HiOutlineSearch size={16} /></button>
-          <button type="button" className="btn-icon" onClick={() => { setFilters({ search: '', status: '', priority: '', page: 1 }); setTimeout(fetchTickets, 0); }}>
+          <button type="button" className="btn-icon" onClick={() => { setFilters({ search: '', status: '', priority: '', page: 1 }); }}>
             <HiOutlineRefresh size={18} />
           </button>
         </form>
@@ -193,6 +220,7 @@ export default function TicketListPage() {
                 <th>Status</th>
                 <th>Priority</th>
                 <th>Category</th>
+                <th>Created By</th>
                 <th>Assignee</th>
                 <th>SLA</th>
                 <th>Created</th>
@@ -210,6 +238,9 @@ export default function TicketListPage() {
                     <td><span className={`badge badge-${t.status.toLowerCase().replace('_', '-')}`}>{t.status.replace('_', ' ')}</span></td>
                     <td><span className={`badge badge-${t.priority.toLowerCase()}`}>{t.priority}</span></td>
                     <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{t.category?.icon} {t.category?.name}</td>
+                    <td style={{ fontSize: '0.82rem' }}>
+                      {t.creator ? `${t.creator.firstName} ${t.creator.lastName}` : <span style={{ color: 'var(--text-muted)' }}>System</span>}
+                    </td>
                     <td style={{ fontSize: '0.82rem' }}>
                       {t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : <span style={{ color: 'var(--text-muted)' }}>Unassigned</span>}
                     </td>

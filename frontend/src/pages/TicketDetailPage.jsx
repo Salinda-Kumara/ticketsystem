@@ -139,13 +139,28 @@ export default function TicketDetailPage() {
             <div className="glass-card" style={{ padding: 24 }}>
               <h3 style={styles.sectionTitle}><HiOutlinePaperClip size={16} /> Attachments ({ticket.attachments.length})</h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
-                {ticket.attachments.map(a => (
-                  <a key={a.id} href={`http://localhost:3002${a.filePath}`} target="_blank" rel="noreferrer" style={styles.attachItem}>
-                    <HiOutlinePaperClip size={14} />
-                    <span>{a.fileName}</span>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>({(a.fileSize / 1024).toFixed(0)} KB)</span>
-                  </a>
-                ))}
+                {ticket.attachments.map(a => {
+                  const isImage = a.mimeType?.startsWith('image/');
+                  return (
+                    <a key={a.id} href={`http://localhost:3002${a.filePath}`} target="_blank" rel="noreferrer" style={isImage ? styles.imageAttachItem : styles.attachItem}>
+                      {isImage ? (
+                        <div style={styles.imageThumbnailWrapper}>
+                          <img src={`http://localhost:3002${a.filePath}`} alt={a.fileName} style={styles.imageThumbnail} />
+                          <div style={styles.imageOverlay}>
+                            <span style={styles.imageOverlayText}>{a.fileName}</span>
+                            <span style={styles.imageOverlaySize}>{(a.fileSize / 1024).toFixed(0)} KB</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <HiOutlinePaperClip size={14} />
+                          <span>{a.fileName}</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>({(a.fileSize / 1024).toFixed(0)} KB)</span>
+                        </>
+                      )}
+                    </a>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -339,7 +354,26 @@ const styles = {
     display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px',
     background: 'var(--bg-glass)', border: '1px solid var(--border-primary)',
     borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', color: 'var(--accent-primary)',
-    textDecoration: 'none', transition: 'all 150ms',
+    textDecoration: 'none', transition: 'all 150ms', height: 'fit-content'
+  },
+  imageAttachItem: {
+    display: 'block', overflow: 'hidden', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)',
+    transition: 'all 150ms', textDecoration: 'none', position: 'relative'
+  },
+  imageThumbnailWrapper: {
+    width: '120px', height: '120px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)'
+  },
+  imageThumbnail: {
+    width: '100%', height: '100%', objectFit: 'cover'
+  },
+  imageOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 6px', fontSize: '0.65rem', display: 'flex', flexDirection: 'column', gap: 2
+  },
+  imageOverlayText: {
+    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+  },
+  imageOverlaySize: {
+    color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem'
   },
   assignList: { display: 'flex', flexDirection: 'column', gap: 4 },
   assignItem: {

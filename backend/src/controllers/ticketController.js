@@ -54,11 +54,32 @@ const getTickets = async (req, res) => {
       if (dateTo) where.createdAt.lte = new Date(dateTo);
     }
     if (search) {
-      where.OR = [
+      const searchUpper = search.toUpperCase().replace(' ', '_');
+      const validStatuses = ['OPEN', 'IN_PROGRESS', 'PENDING', 'RESOLVED', 'CLOSED', 'REOPENED'];
+      const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+      
+      const orConditions = [
         { title: { contains: search, mode: 'insensitive' } },
         { ticketNumber: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { description: { contains: search, mode: 'insensitive' } },
+        { category: { name: { contains: search, mode: 'insensitive' } } },
+        { creator: { firstName: { contains: search, mode: 'insensitive' } } },
+        { creator: { lastName: { contains: search, mode: 'insensitive' } } },
+        { assignee: { firstName: { contains: search, mode: 'insensitive' } } },
+        { assignee: { lastName: { contains: search, mode: 'insensitive' } } }
       ];
+
+      const matchedStatuses = validStatuses.filter(s => s.includes(searchUpper));
+      if (matchedStatuses.length > 0) {
+        orConditions.push({ status: { in: matchedStatuses } });
+      }
+
+      const matchedPriorities = validPriorities.filter(p => p.includes(searchUpper));
+      if (matchedPriorities.length > 0) {
+        orConditions.push({ priority: { in: matchedPriorities } });
+      }
+
+      where.OR = orConditions;
     }
 
     const [tickets, total] = await Promise.all([

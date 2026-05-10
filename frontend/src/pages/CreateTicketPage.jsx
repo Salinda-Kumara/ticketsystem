@@ -109,13 +109,18 @@ export default function CreateTicketPage() {
             </label>
             {files.length > 0 && (
               <div style={styles.fileList}>
-                {files.map((f, i) => (
-                  <div key={i} style={styles.fileItem}>
-                    <span style={{ fontSize: '0.82rem', flex: 1 }}>{f.name}</span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{(f.size / 1024).toFixed(0)} KB</span>
-                    <button type="button" className="btn-icon" onClick={() => removeFile(i)}><HiOutlineX size={14} /></button>
-                  </div>
-                ))}
+                {files.map((f, i) => {
+                  const isImage = f.type?.startsWith('image/');
+                  const fileUrl = isImage ? URL.createObjectURL(f) : null;
+                  return (
+                    <div key={i} style={styles.fileItem}>
+                      {isImage && <img src={fileUrl} alt={f.name} style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />}
+                      <span style={{ fontSize: '0.82rem', flex: 1, marginLeft: isImage ? 8 : 0 }}>{f.name}</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{(f.size / 1024).toFixed(0)} KB</span>
+                      <button type="button" className="btn-icon" onClick={() => removeFile(i)}><HiOutlineX size={14} /></button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

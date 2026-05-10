@@ -5,6 +5,6 @@ const { roleGuard } = require('../middleware/roleGuard');
 
 router.use(authenticate);
 router.get('/monthly', roleGuard('ADMIN', 'TEAM_LEADER'), getMonthlyReport);
-router.get('/export', roleGuard('ADMIN', 'TEAM_LEADER'), exportTickets);
+router.get('/export', roleGuard('ADMIN', 'TEAM_LEADER', 'AGENT'), exportTickets);
 
 module.exports = router;

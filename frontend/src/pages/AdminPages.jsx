@@ -116,9 +116,20 @@ export function SLARulesPage() {
 export function AuditPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedLog, setSelectedLog] = useState(null);
 
   useEffect(() => { fetch(); }, []);
   const fetch = async () => { setLoading(true); try { const r = await auditAPI.getLogs({ limit: 100 }); setLogs(r.data.data.logs); } catch (e) {} setLoading(false); };
+
+  const formatAction = (log) => {
+    if (log.action === 'UPDATE_STATUS') {
+      const match = log.details?.match(/to ([A-Z_]+)/);
+      if (match) return `STATUS: ${match[1]}`;
+      return 'STATUS UPDATE';
+    }
+    if (log.action === 'ASSIGN') return 'ASSIGNED';
+    return log.action.replace('_', ' ');
+  };
 
   return (
     <div className="animate-in">
@@ -127,10 +138,41 @@ export function AuditPage() {
         {loading ? <div className="loading-spinner"><div className="spinner" /></div> : (
           <table className="data-table">
             <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>IP Address</th><th>Details</th></tr></thead>
-            <tbody>{logs.map(l => (<tr key={l.id}><td style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{format(new Date(l.createdAt), 'MMM dd HH:mm:ss')}</td><td style={{ fontWeight: 500 }}>{l.user?.firstName} {l.user?.lastName}</td><td><span className="badge badge-role">{l.action}</span></td><td style={{ fontSize: '0.82rem' }}>{l.entity}</td><td style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{l.ipAddress || '-'}</td><td style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{l.details || '-'}</td></tr>))}</tbody>
+            <tbody>{logs.map(l => (
+              <tr key={l.id} onClick={() => setSelectedLog(l)} style={{ cursor: 'pointer' }}>
+                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{format(new Date(l.createdAt), 'MMM dd HH:mm:ss')}</td>
+                <td style={{ fontWeight: 500 }}>{l.user?.firstName} {l.user?.lastName}</td>
+                <td><span className="badge badge-role">{formatAction(l)}</span></td>
+                <td style={{ fontSize: '0.82rem' }}>{l.entity}</td>
+                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{l.ipAddress || '-'}</td>
+                <td style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{l.details || '-'}</td>
+              </tr>
+            ))}</tbody>
           </table>
         )}
       </div>
+      {selectedLog && (
+        <div className="modal-overlay" onClick={() => setSelectedLog(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+            <div className="modal-header">
+              <h2>Audit Log Details</h2>
+              <button className="btn-icon" onClick={() => setSelectedLog(null)}>✕</button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8, fontSize: '0.85rem' }}>
+                <div style={{ color: 'var(--text-muted)' }}>Timestamp</div><div>{format(new Date(selectedLog.createdAt), 'PPpp')}</div>
+                <div style={{ color: 'var(--text-muted)' }}>User</div><div>{selectedLog.user?.firstName} {selectedLog.user?.lastName} ({selectedLog.user?.email})</div>
+                <div style={{ color: 'var(--text-muted)' }}>Action</div><div><span className="badge badge-role">{formatAction(selectedLog)}</span></div>
+                <div style={{ color: 'var(--text-muted)' }}>Entity</div><div>{selectedLog.entity}</div>
+                <div style={{ color: 'var(--text-muted)' }}>Entity ID</div><div style={{ fontFamily: 'monospace' }}>{selectedLog.entityId || '-'}</div>
+                <div style={{ color: 'var(--text-muted)' }}>IP Address</div><div style={{ fontFamily: 'monospace' }}>{selectedLog.ipAddress || '-'}</div>
+                <div style={{ color: 'var(--text-muted)' }}>Details</div><div>{selectedLog.details || '-'}</div>
+                <div style={{ color: 'var(--text-muted)' }}>Log ID</div><div style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{selectedLog.id}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
