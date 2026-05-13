@@ -141,11 +141,12 @@ export default function TicketDetailPage() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
                 {ticket.attachments.map(a => {
                   const isImage = a.mimeType?.startsWith('image/');
+                  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
                   return (
-                    <a key={a.id} href={`http://localhost:3002${a.filePath}`} target="_blank" rel="noreferrer" style={isImage ? styles.imageAttachItem : styles.attachItem}>
+                    <a key={a.id} href={`${BASE_URL}${a.filePath}`} target="_blank" rel="noreferrer" style={isImage ? styles.imageAttachItem : styles.attachItem}>
                       {isImage ? (
                         <div style={styles.imageThumbnailWrapper}>
-                          <img src={`http://localhost:3002${a.filePath}`} alt={a.fileName} style={styles.imageThumbnail} />
+                          <img src={`${BASE_URL}${a.filePath}`} alt={a.fileName} style={styles.imageThumbnail} />
                           <div style={styles.imageOverlay}>
                             <span style={styles.imageOverlayText}>{a.fileName}</span>
                             <span style={styles.imageOverlaySize}>{(a.fileSize / 1024).toFixed(0)} KB</span>

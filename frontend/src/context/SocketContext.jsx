@@ -18,7 +18,8 @@ export function SocketProvider({ children }) {
     }
 
     const token = localStorage.getItem('token');
-    const newSocket = io('http://localhost:3002', {
+    const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+    const newSocket = io(BASE_URL, {
       auth: { token },
       transports: ['websocket', 'polling']
     });
